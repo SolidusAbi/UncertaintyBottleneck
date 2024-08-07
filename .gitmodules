@@ -1,0 +1,3 @@
+[submodule "modules/torch-uncertainty"]
+	path = modules/torch-uncertainty
+	url = git@github.com:SolidusAbi/torch-uncertainty.git
