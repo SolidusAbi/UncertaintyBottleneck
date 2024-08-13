@@ -16,15 +16,15 @@ class IsotropicGaussian(nn.Linear, VariationalLayer):
         self.log_sigma_weight = Parameter(torch.Tensor(out_features, in_features))
         self.log_sigma_bias = Parameter(torch.Tensor(out_features))
         
-        torch.nn.init.xavier_uniform_(self.log_sigma_weight)
-        self.log_sigma_bias.data.fill_(-5)
-        # self.log_sigma_bias.data.fill_(2*np.log((2*3)))
+        torch.nn.init.xavier_normal_(self.log_sigma_weight)
+        self.log_sigma_bias.data.fill_(0)
         
         self.mu, self.sigma = None, None
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
+    def forward(self, x: torch.Tensor, n_samples=1) -> torch.Tensor:
+        print(n_samples)
         mu = F.linear(x, self.weight, self.bias) 
-        sigma = torch.exp(0.5 * F.linear(x, self.log_sigma_weight, self.log_sigma_bias))
+        sigma = torch.exp(0.5 * F.linear(x, self.log_sigma_weight, self.log_sigma_bias)) # log_sigma = 0.5 * log(sigma^2)
 
         self.mu, self.sigma = mu, sigma
 
@@ -34,8 +34,25 @@ class IsotropicGaussian(nn.Linear, VariationalLayer):
 
     def kl_reg(self, targets: torch.Tensor) -> torch.Tensor:
         # KL-Divergence regularization
-        assert torch.all((targets == 0) | (targets == 1))
-        sigma_2 = (torch.ones_like(targets) + ((self.sigma_anomaly-1) * targets)).unsqueeze(1).cuda()
-        result = (torch.log(sigma_2) - torch.log(self.sigma) + (self.sigma**2 + self.mu**2)/(2*sigma_2**2) - 0.5)
+        # p ~ N(0, I)
+        k = self.bias.size(0)
+        mu = self.mu.pow(2).sum(1)
+        det_sigma = self.sigma.prod(1)
+        tr_sigma = self.sigma.sum(1)
+
+        kl = 0.5*(mu + tr_sigma - torch.log(det_sigma) - k)
+        return kl.mean()
+
+    def _reparametrize_n(self, mu, sigma, n=1):
+        '''
+            Reparameterization trick for n samples.
+        '''
+        def expand(v):
+            assert torch.is_tensor(v)
+            return v.expand(n, *v.size())
         
-        return result.mean() 
+        mu = expand(mu)
+        sigma = expand(sigma)
+        eps = torch.normal(0, torch.ones_like(sigma))
+        return (mu + sigma * eps)
+    

@@ -1,1 +1,0 @@
-from .VariationalLayer import VariationalLayer
