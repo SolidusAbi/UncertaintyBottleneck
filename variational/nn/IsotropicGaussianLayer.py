@@ -22,23 +22,24 @@ class IsotropicGaussian(nn.Linear, VariationalLayer):
         self.mu, self.sigma = None, None
 
     def forward(self, x: torch.Tensor, n_samples=1) -> torch.Tensor:
-        print(n_samples)
         mu = F.linear(x, self.weight, self.bias) 
         sigma = torch.exp(0.5 * F.linear(x, self.log_sigma_weight, self.log_sigma_bias)) # log_sigma = 0.5 * log(sigma^2)
 
         self.mu, self.sigma = mu, sigma
 
         # Reparameterization trick
-        eps = torch.normal(0, torch.ones_like(sigma))
-        return mu + sigma * eps
+        # eps = torch.normal(0, torch.ones_like(sigma))
+        # return mu + sigma * eps
 
-    def kl_reg(self, targets: torch.Tensor) -> torch.Tensor:
+        return self._reparametrize_n(mu, sigma, n_samples)
+
+    def kl_reg(self) -> torch.Tensor:
         # KL-Divergence regularization
         # p ~ N(0, I)
-        k = self.bias.size(0)
-        mu = self.mu.pow(2).sum(1)
-        det_sigma = self.sigma.prod(1)
-        tr_sigma = self.sigma.sum(1)
+        k = self.bias.size(0) # Dimension of Normal Distribution
+        mu = self.mu.pow(2).sum(1) # mu^2
+        det_sigma = self.sigma.prod(1) # determinant of sigma
+        tr_sigma = self.sigma.sum(1) # trace of sigma
 
         kl = 0.5*(mu + tr_sigma - torch.log(det_sigma) - k)
         return kl.mean()

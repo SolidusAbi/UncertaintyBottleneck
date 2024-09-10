@@ -25,10 +25,10 @@ class SGVBL(nn.Module):
             if isinstance(module, (VariationalLayer)):
                 self.variational_layers.append(module)
 
-    def forward(self, input, output, target, kl_weight=1.0):
-        assert output.requires_grad
+    def forward(self, input, target, kl_weight=1.0):
+        assert input.requires_grad
         kl = 0.0
         for layer in self.variational_layers:
-            kl += layer.kl_reg(target)
+            kl += layer.kl_reg()
             
-        return self.train_size * (self.loss(input, output, reduction='mean') + kl_weight * kl)
+        return self.train_size * (self.loss(input, target, reduction='mean') + kl_weight * kl)
