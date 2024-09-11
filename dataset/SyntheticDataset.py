@@ -46,6 +46,7 @@ class SyntheticDataset1(SyntheticDataset):
         self.X = self.__to_tensor(self.X).unsqueeze(1)
         self.X = (self.X - self.X.mean()) / self.X.std()
         self.y = self.__to_tensor(self.y)
+        self.y = (self.y - self.y.mean()) / self.y.std()
 
     def __to_tensor(self, x):
         return tensor(x).float()
